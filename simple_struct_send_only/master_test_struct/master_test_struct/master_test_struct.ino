@@ -17,21 +17,21 @@ SPISettings spi_setting(SPI_CLOCK_DIV2, MSBFIRST, SPI_MODE2);
 typedef struct customCmd {
   uint8_t cmd_id;
   float   data;
-} cmd_msg;
+} cmd_msg; // 5 bytes
 
 typedef union customCmdUnion {
   cmd_msg message;
   unsigned char bytes[sizeof(cmd_msg)];
-} cmd_msg_u;
+} cmd_msg_u; // 5 bytes
 
-void sendsendCmd2Slave16(uint8_t cs_pin, customCmd & cmd_cdm2send)
+void sendCustomCmd2Slave(uint8_t cs_pin, customCmd & cmd_cdm2send)
 {
   customCmdUnion cmd_msg_u2send;
   cmd_msg_u2send.message = cmd_cdm2send;
   
   SPI.beginTransaction(spi_setting);
   digitalWrite(cs_pin, LOW);
-  for (size_t i = 0; i < sizeof(cmd_msg); i++)
+  for (size_t i = 0; i < sizeof(customCmdUnion); i++)
   {
     SPI.transfer(cmd_msg_u2send.bytes[i]);
   }
@@ -70,14 +70,14 @@ void setup() {
 }
 
 void loop() {
+  customCmd custom_CMD;
+  
   Serial.println("--SENDING: LED ON--");
-  customCmd CMC_LED_ON;
-  buildMsgLedOn(CMC_LED_ON);
-  sendsendCmd2Slave16( (uint8_t) SPI0_NPCS0, CMC_LED_ON);
-  delay(2000);
+  buildMsgLedOn(custom_CMD);
+  sendCustomCmd2Slave( (uint8_t) SPI0_NPCS0, custom_CMD);
+  delay(1000);
   Serial.println("--SENDING: LED OFF--");
-  customCmd CMC_LED_OFF;
-  buildMsgLedOn(CMC_LED_OFF);
-  sendsendCmd2Slave16( (uint8_t) SPI0_NPCS0, CMC_LED_OFF);
-  delay(2000);
+  buildMsgLedOff(custom_CMD);
+  sendCustomCmd2Slave( (uint8_t) SPI0_NPCS0, custom_CMD);
+  delay(1000);
 }
