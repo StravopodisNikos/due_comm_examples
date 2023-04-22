@@ -1,6 +1,7 @@
 
 #define SERIAL0_BAUD1 250000
 #define SERIAL3_BAUD  115200
+#define SERIAL3_BAUD1 1000000
 
 /*
  * DUE(master) -> Serial0 -> PC
@@ -14,14 +15,28 @@
 #define ST_LED_ON   8797 // 225D (HEX) // 00100010-01011101 (BIN)
 #define ST_LED_OFF  8954 // 22FA (HEX) // 00100010-11111010 (BIN)
 
-#define CMD_LED_ON_1 0b00101010;
-#define CMD_LED_ON_2 0b00011111;
+#define CMD_LED_ON_1  0b00101010
+#define CMD_LED_OFF_1 0b11110110
+#define ST_LED_ON_1   0b01011101
+#define ST_LED_OFF_1  0b11111010
 
 uint8_t data2send;
+uint8_t response;
+
+void setByte(uint8_t SetByteCmd) {
+  Serial3.write(SetByteCmd);
+  return;
+}
+
+uint8_t getByte(uint8_t GetByteCmd) {
+    Serial3.write(GetByteCmd);
+    while(!Serial3.available());
+    return Serial3.read();
+}
 
 void setup() {
   Serial.begin(SERIAL0_BAUD1);
-  Serial3.begin(SERIAL3_BAUD);
+  Serial3.begin(SERIAL3_BAUD1);
 
   while (!Serial); //wait for the Serial Monitor to pop
   Serial.println("MASTER STARTED");
@@ -29,12 +44,7 @@ void setup() {
 }
 
 void loop() {
-  data2send = CMD_LED_ON_1;
-  Serial3.write(data2send);
-  Serial.println("SENT BYTE 1");
-  delay(2000);
-  data2send = CMD_LED_ON_2;
-  Serial3.write(data2send);
-  Serial.println("SENT BYTE 2");
-  delay(2000);
+  setByte(CMD_LED_ON_1); delay(1000);
+  response = getByte(CMD_LED_OFF_1); delay(1000);
+  Serial.print("SLAVE RESPONDED: "); Serial.println(response,BIN);
 }
