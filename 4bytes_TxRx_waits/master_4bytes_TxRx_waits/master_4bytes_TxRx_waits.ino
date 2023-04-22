@@ -74,22 +74,33 @@ void sendReadCmd2SlaveWait(uint8_t cs_pin, msg_t & cmd, msg_t & res)
   Serial.print("Sending Packet[3]: "); Serial.println(cmd.packets[3],BIN); 
   SPI.transfer(cmd.packets[3]); //while (!SPI_SR_TXEMPTY){};
   //SPI0->SPI_TDR = cmd.packets[3]; while (!SPI_SR_TXEMPTY);
-  
+
+  uint8_t bytes[4];
   time_start_millis = millis();
   while ( (i < 4) && (millis() < timeout) ) {
-    //while ((SPI0->SPI_SR & SPI_SR_RDRF)){ Serial.println("2"); };
-    res.packets[i] = REG_SPI0_RDR; 
-    Serial.print("Packet["); Serial.print(i); Serial.print("] received: "); Serial.println(cmd.packets[i],BIN);
+    if (millis() > timeout) {
+      SPI.endTransaction();
+      digitalWrite(cs_pin, HIGH);
+      Serial.println("TIMEOUT_ERROR");
+    }
+    
+    
+    for (int j = 0; j < 4; j++) {
+      bytes[j] = SPI.transfer(0x00); delayMicroseconds (100);
+    }    
+    res.packets[i] = *(float*)bytes; 
+    Serial.print("Packet["); Serial.print(i); Serial.print("] received: "); Serial.println(res.packets[i],BIN);
     i++;
   }
   trans_time_millis = millis() - time_start_millis;
   Serial.print("Reading Total Time: "); Serial.print(trans_time_millis); Serial.println(" [ms]");
-  if (abs(cmd.data) > val_lim) 
+  float received_value = res.data;
+  if (abs(received_value) > val_lim) 
   {
     res.data = cmd.data;
     response_received = true;
     Serial.println("Valid Slave responce received!");
-    Serial.print("Slave sent: "); Serial.println(res.data,DEC);
+    Serial.print("Slave sent: "); Serial.println(received_value,DEC);
   }
   else
   {
@@ -117,13 +128,11 @@ void loop() {
   sendReadCmd2SlaveWait( (uint8_t)  SPI0_NPCS0, cmd2send, res2receive);
   Serial.println("MASTER SENT: CMD_LED_ON_F"); 
   Serial.print("MASTER RECEIVED: "); Serial.println(res2receive.data,DEC);
-  delay(1000);
+  delay(5000);
 
   cmd2send.data = CMD_LED_OFF_F;
   sendReadCmd2SlaveWait( (uint8_t)  SPI0_NPCS0, cmd2send, res2receive);
   Serial.println("MASTER SENT: CMD_LED_OFF_F"); 
   Serial.print("MASTER RECEIVED: "); Serial.println(res2receive.data,DEC);
-  delay(1000);  
-
-  delay(1000);
+  delay(5000);  
 }

@@ -55,7 +55,7 @@ void setup() {
   Serial.print("["); Serial.print(millis()); Serial.print("] "); Serial.println("MASTER STARTED");
 
   // TEST CONVERSION FLOAT<--> BYTES
-  /*
+  ///*
   split_float_to_bytes((float) DECOY_F, txBuf);
   Serial.println(txBuf[3],BIN); rxBuf[0] = txBuf[3];
   Serial.println(txBuf[2],BIN); rxBuf[1] = txBuf[2];
@@ -63,7 +63,12 @@ void setup() {
   Serial.println(txBuf[0],BIN); rxBuf[3] = txBuf[0];
   test_f =  merge_bytes_to_float(txBuf);
   Serial.print("FORWARD PUSH: "); Serial.println(test_f,4); //-> THIS WORKS
-  */
+  //*/
+  
+  // First sync master and slave: Master sends the (CS Pin ID) and
+  // waits until slave responds with (SYNCED).
+  bool FirstSync = false;
+  
   
   // TEST CODE 
   // /*

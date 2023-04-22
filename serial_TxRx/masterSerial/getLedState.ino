@@ -15,9 +15,9 @@ void getLedState(uint8_t cs_pin, uint8_t cmd) {
   digitalWrite(cs_pin, LOW);
   Serial.print("Master set  [  CMD_ID]: "); Serial.println(cmd,BIN);
   // 1. send the sync byte and wait until SYNCED
-  do {
+  //do {
     response = SPI.transfer(cmd); delayMicroseconds(50); Serial.print("Slave responded:"); Serial.println(response,BIN);
-  } while (!(response == (uint8_t) SYNCED));
+  //} while (!(response == (uint8_t) SYNCED));
   // 2. send the decoy packets
   rxBuf[3] = SPI.transfer(0); delayMicroseconds(50);
   rxBuf[2] = SPI.transfer(0); delayMicroseconds(50);

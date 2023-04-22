@@ -124,8 +124,11 @@ void setup() {
   buf_cnt = 4;
   __transferState = WAIT4SYNC;
   setupGetMode();
-  SPI0->SPI_RDR;
-  SPI0->SPI_TDR;
+  //SPI0->SPI_RDR;
+  //SPI0->SPI_TDR;
+
+  // First sync master-slave
+  
 }
 
 void loop() {

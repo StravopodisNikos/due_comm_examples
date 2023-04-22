@@ -27,7 +27,7 @@
 
 typedef union{
   float cmd_f;
-  uint16_t cmd_parts[2];
+  uint8_t cmd_parts[4];
 } cmd_un_t;
 
 cmd_un_t cmd2send;
@@ -48,7 +48,7 @@ void setupMaster(uint8_t cs_pin)
   return;
 }
 
-void sendReadCmd2SlaveWait(uint8_t cs_pin, cmd_un_t cmd, uint16_t * response, float & response_f)
+void sendReadCmd2SlaveWait(uint8_t cs_pin, cmd_un_t cmd, uint8_t * response, float & response_f)
 {
   //begins Transaction and waits for the full response, or timeouts
   bool response_received = false;
@@ -58,15 +58,16 @@ void sendReadCmd2SlaveWait(uint8_t cs_pin, cmd_un_t cmd, uint16_t * response, fl
   time_start_millis = millis();
   while ( (!response_received) && (!timeout_error) )
   {
-    *response     = SPI.transfer16(cmd.cmd_parts[0]);
-    *(response+1) = SPI.transfer16(cmd.cmd_parts[1]);
-    
+    *response     = SPI.transfer(cmd.cmd_parts[0]); while (!SPI_SR_TDRE);
+    *(response+1) = SPI.transfer(cmd.cmd_parts[1]); while (!SPI_SR_TDRE);
+    *(response+2) = SPI.transfer(cmd.cmd_parts[2]); while (!SPI_SR_TDRE);
+    *(response+3) = SPI.transfer(cmd.cmd_parts[3]); while (!SPI_SR_TDRE);
     if ( (millis() - time_start_millis) > RESPONSE_TIMEOUT)
     {
       timeout_error = true;
       Serial.println("TIMEOUT ERROR!");
     }
-    if (response > 0)
+    if ( (*response) > 0 )
     {
       response_f = cmd.cmd_f;
       response_received = true;
@@ -74,13 +75,11 @@ void sendReadCmd2SlaveWait(uint8_t cs_pin, cmd_un_t cmd, uint16_t * response, fl
       SPI.endTransaction();
     }
   }
-
   if (!response_received)
   {
       digitalWrite(cs_pin, HIGH);
       SPI.endTransaction();    
   }
-
   return;
 }
 
