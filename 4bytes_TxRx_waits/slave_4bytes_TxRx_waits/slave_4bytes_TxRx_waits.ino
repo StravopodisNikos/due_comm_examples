@@ -89,7 +89,7 @@ void sendPackets()
 
 void setupSlave(uint8_t cs_pin)
 {
-  pinMode(SPI0_NPCS0, INPUT_PULLUP);
+  //pinMode(SPI0_NPCS0, INPUT_PULLUP);
   pinMode(SPI0_MISO, OUTPUT);
   // SPI Control Register(P.32.8.1/p.693): Enable the SPI to transfer and receive data
   SPI0->SPI_CR  = 0x00000001; //SPI_CR_SPIEN  
@@ -99,7 +99,7 @@ void setupSlave(uint8_t cs_pin)
   // SPI Interrupt Enable Register(P.32.8.6/p.700): Enable the Interrupts
   SPI0->SPI_IER = 0x00000001; // Enable RDRF(Receive Data Register Full Interrupt Enable) 
   NVIC_EnableIRQ(SPI0_IRQn); // FP.10.20.10.1 p.164
-  NVIC_SetPriority(SPI0_IRQn, 2 << 4);
+  // NVIC_SetPriority(SPI0_IRQn, 2 << 4);
   // SPI Chip Select Register (P.32.8.9/p.703)
   SPI0->SPI_CSR[0] = SPI_CSR_NCPHA | SPI_DLYBCT(10,8) | SPI_CSR_BITS_8_BIT| SPI_CSR_SCBR(1);
   __DataKeepComing      = true;
@@ -125,30 +125,35 @@ void ChangeLEDstate2OFF()
 
 void SPI0_Handler() 
 {
-  // [DEBUG] Check the counters!!!
-  cnt = 3;
-  Serial.println(cnt);
-  while ( (cnt>=0) )
-  {   
-    Serial.println("SPI0_Handler is dead...");
+  int i;
+  uint8_t dummy_data;
+  Serial.print("__data_received_flag = ");Serial.println(__data_received_flag);
+  //if (SPI0->SPI_SR & SPI_SR_RDRF) {   
+    dummy_data = SPI0->SPI_RDR; // -> cmd2receive.packets[cnt] = SPI0->SPI_RDR;
+    float value = 3.14f;
     //while ((SPI0->SPI_SR & SPI_SR_RDRF)) {Serial.println("2");};
-    cmd2receive.packets[cnt] = SPI0->SPI_RDR;
-    Serial.print("Packet[");Serial.print(cnt);Serial.print("] received:"); Serial.println(cmd2receive.packets[cnt],BIN);
-    cnt--;
-    Serial.println(cnt);
-    if (cnt == 0)
+    union {
+      float f;
+      uint8_t b[4];
+    } response;    
+    response.f = value;
+    for (i = 0; i < 4; i++) {
+      SPI0->SPI_TDR = response.b[i]; // send the response byte by byte
+      while (!(SPI0->SPI_SR & SPI_SR_TDRE)) {} // wait until the Transmit Data Register is empty
+    }    
+    //Serial.print("Packet[");Serial.print(cnt);Serial.print("] received:"); Serial.println(cmd2receive.packets[cnt],BIN);
+    if (i==4)
     {
       __data_received_flag = true;
-      //respond2cmd(cmd2receive, res2send);
-  
-    }   
-  }
+    }
+  //}
 
   if (__data_received_flag)
   {
-    respond2cmd();
-    sendpackets();
+    //respond2cmd();
+    //sendPackets();
   }
+
   return;
 }
 
@@ -156,7 +161,7 @@ void setup()
 {
   Serial.begin(SERIAL_BAUD1);
   SPI.begin(SPI0_NPCS0);
-  SPI.setBitOrder(MSBFIRST);
+  //SPI.setBitOrder(MSBFIRST);
   setupSlave((uint8_t) SPI0_NPCS0);
   SPI.attachInterrupt();
   pinMode(LEDpin, OUTPUT);
@@ -181,7 +186,7 @@ void loop()
   }  
   if (__data_received_flag)
   {
-    //respond2cmd(cmd2receive.data, res2send.data);
+    //respond2cmd();
     //sendPackets();
     __data_received_flag = false;
     //react2ReceivedCmd = true;

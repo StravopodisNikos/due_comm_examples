@@ -38,15 +38,14 @@ volatile bool __modfault_flag;
 volatile bool __DataKeepComing;
 uint16_t receivedData = 0;
 volatile uint8_t pos;
-volatile uint16_t __PacketReceived[2];
+volatile uint16_t __PacketReceived[4];
 bool react2ReceivedCmd;
 
 typedef union{
   float res_f;
-  uint16_t res_parts[2];
+  uint16_t res_parts[4];
 } res_un_t;
 res_un_t res2send;
-uint16_t packet_received_buffer[3];
 
 // [1-4-223] Author Stravopodis N.
 void setupSlave(uint8_t cs_pin)
@@ -62,7 +61,7 @@ void setupSlave(uint8_t cs_pin)
   NVIC_EnableIRQ(SPI0_IRQn); // FP.10.20.10.1 p.164
   // SPI Chip Select Register (P.32.8.9/p.703)
   SPI0->SPI_CSR[0] = SPI_CSR_NCPHA | SPI_DLYBCT(10,8) | SPI_CSR_BITS_8_BIT| SPI_CSR_SCBR(1);
-  __DataKeepComing     = true;
+  __DataKeepComing      = true;
   __data_received_flag  = false;
   __overs_flag          = false;
   __modfault_flag       = false;
@@ -70,24 +69,16 @@ void setupSlave(uint8_t cs_pin)
   return;
 }
 
-void respond2masterON()
+void respond2master(res_un_t res)
 {
-  res2send.res_f = (float) STATE_LED_ON;
-  REG_SPI0_TDR = res2send.res_parts[0];
-  while (!(SPI0->SPI_SR & SPI_SR_TDRE));
-  REG_SPI0_TDR = res2send.res_parts[1];
-  while (!(SPI0->SPI_SR & SPI_SR_TDRE));
+  res.res_f = __CMD_Received_f;
+  REG_SPI0_TDR = res.res_parts[0]; while (!SPI_SR_TDRE);
+  REG_SPI0_TDR = res.res_parts[1]; while (!SPI_SR_TDRE);
+  REG_SPI0_TDR = res.res_parts[2]; while (!SPI_SR_TDRE);
+  REG_SPI0_TDR = res.res_parts[3]; while (!SPI_SR_TDRE);  
   return;
 }
-void respond2masterOFF()
-{
-  res2send.res_f = (float) STATE_LED_OFF;
-  REG_SPI0_TDR = res2send.res_parts[0];
-  while (!(SPI0->SPI_SR & SPI_SR_TDRE));
-  REG_SPI0_TDR = res2send.res_parts[1];
-  while (!(SPI0->SPI_SR & SPI_SR_TDRE));
-  return;
-}
+
 void ChangeLEDstate2ON()
 {
   //__led_state = !__led_state;
@@ -112,48 +103,20 @@ void SPI0_Handler()
   {
     __modfault_flag = true;
   }  
-  if (SPI_SR_TDRE == LOW)
-  {
-    // Based on SPI Status Register(P.32.8.5/p.698): Data has been written to SPI_TDR but
-    // yet not transferred to the serializer. SO => doesn't read again BUT sends the data!
-    Serial.println("NO TRANSMITTED DATA");
+  if ((!__overs_flag) && (SPI0->SPI_SR & SPI_SR_RDRF)) 
+  {  
+    __PacketReceived[pos] = SPI0->SPI_RDR; // pos = 0
+
+    if (__data_received_flag)
+    {
+      __DataKeepComing = false;
+      SPI0->SPI_RDR; // Clear the RDR
+    }
   }
   else
   {
-    if ((!__overs_flag) && (SPI0->SPI_SR & SPI_SR_RDRF)) 
-    {  
-      if (__DataKeepComing)
-      {
-        __PacketReceived[pos] = SPI0->SPI_RDR; // pos = 0
-        pos++;
-        if (pos >=2)
-        {
-          __data_received_flag = true;
-        }
-        else
-        {
-          __DataKeepComing = true;
-          __data_received_flag = false;
-        }
-      }
-      else
-      {
-        __PacketReceived[pos] = SPI0->SPI_RDR; // pos = 1
-        __DataKeepComing = true;
-        __data_received_flag = false;
-      }
-      if (__data_received_flag)
-      {
-        __DataKeepComing = false;
-        SPI0->SPI_RDR; // Clear the RDR
-      }
-    }
-    else
-    {
-      Serial.println("NO UNREAD DATA");
-    }
+    Serial.println("NO UNREAD DATA");
   }
-  
   return;
 }
 
@@ -186,7 +149,6 @@ void loop()
   }  
   if (__data_received_flag)
   {
-    packet_received_buffer[2] = (uint16_t) 0;
     for (size_t i = 0; i < sizeof(res2send); i++)
     {
       res2send.res_parts[i] = __PacketReceived[i];
@@ -203,12 +165,12 @@ void loop()
     if (__CMD_Received_f == CMD_LED_ON_F)
     {
       ChangeLEDstate2ON();
-      respond2masterON();
+      respond2master(res2send);
     }
     if (__CMD_Received_f == CMD_LED_OFF_F)
     {
       ChangeLEDstate2OFF();
-      respond2masterOFF();
+      respond2master(res2send);
     }
     __DataKeepComing = true;
     react2ReceivedCmd = false;
