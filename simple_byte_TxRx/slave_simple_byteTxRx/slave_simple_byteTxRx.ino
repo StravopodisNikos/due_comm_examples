@@ -74,13 +74,13 @@ void respond2masterOFF()
 void ChangeLEDstate2ON()
 {
   //__led_state = !__led_state;
-  digitalWrite(LEDpin, HIGH); delay(500);
+  digitalWrite(LEDpin, HIGH); //delay(500);
   return;
 }
 void ChangeLEDstate2OFF()
 {
   //__led_state = !__led_state;
-  digitalWrite(LEDpin, LOW); delay(500);
+  digitalWrite(LEDpin, LOW); //delay(500);
   return;
 }
 
