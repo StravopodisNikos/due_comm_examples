@@ -80,6 +80,7 @@ void merge_bytes_to_32bits(R & val, uint8_t *byte_array) {
 template void merge_bytes_to_32bits<float&>(float&, uint8_t *byte_array);
 template void merge_bytes_to_32bits<long&>(long&, uint8_t *byte_array);
 
+
 Dynamixel2Arduino dxl(Serial, DXL_DIR_PIN);
 
 void setup() {
