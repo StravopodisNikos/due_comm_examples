@@ -68,6 +68,7 @@ void loop() {
       print4Bytes(bit32_array);
       cur_state_l = ST_LED_OFF_L;
     } else if (cmd_received == GIVE_STATE){
+      Serial3.write((uint8_t) SYNCED);
       returnCurrentState();
     }
     else {

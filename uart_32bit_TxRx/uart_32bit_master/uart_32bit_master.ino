@@ -52,7 +52,13 @@ void set4Bytes(uint8_t * Byte4Array, uint8_t Set4BytesCmd) {
 void get4Byte(uint8_t * Byte4Array, uint8_t Get4BytesCmd) {
     // SEND THE FLAG BYTE - DEMANDS A PACKET OF 4 BYTES NEXT
     //while(Serial3.availableForWrite()<MAX_PACKET_BITS);
-    Serial3.write(Get4BytesCmd);
+    do {
+      Serial3.write(Get4BytesCmd);
+      while(!Serial3.available());
+      synced_response = Serial3.read();
+      SerialUSB.println("7");
+    } while (!(synced_response == SYNCED));
+    SerialUSB.println("SYNCED");
     for (int i = 0; i < BIT32_ARRAY_SIZE; i++){
       while(!Serial3.available());
       *(Byte4Array + i) = Serial3.read();
