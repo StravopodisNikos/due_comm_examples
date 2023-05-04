@@ -13,6 +13,12 @@
 #define ST_LED_ON_L   87978797 // 00000101-00111110-01110011-00101101 (BIN)
 #define ST_LED_OFF_L  89548954 // 00000101-01010110-01101000-10011010 (BIN)
 
+uint8_t cmd_received;
+float data_received_f;
+long data_received_l;
+long cur_state_l;
+uint8_t bit32_array[BIT32_ARRAY_SIZE];
+
 template<typename R>
 void merge_bytes_to_32bits(R & val, uint8_t *byte_array) {
   uint8_t *ptr = reinterpret_cast<uint8_t*>(&val);
@@ -24,11 +30,15 @@ void merge_bytes_to_32bits(R & val, uint8_t *byte_array) {
 template void merge_bytes_to_32bits<float&>(float&, uint8_t *byte_array);
 template void merge_bytes_to_32bits<long&>(long&, uint8_t *byte_array);
 
-uint8_t cmd_received;
-float data_received_f;
-long data_received_l;
-long cur_state_l;
-uint8_t bit32_array[BIT32_ARRAY_SIZE];
+template<typename T>
+void split_32bits_to_bytes(T val, uint8_t *byte_array) {
+  uint8_t *ptr = reinterpret_cast<uint8_t*>(&val);
+  for (int i = 0; i < BIT32_ARRAY_SIZE; i++) {
+    byte_array[i] = ptr[i];
+  }
+}
+template void split_32bits_to_bytes<float>(float val, uint8_t *byte_array);
+template void split_32bits_to_bytes<long>(long val, uint8_t *byte_array);
 
 void print4Bytes(uint8_t * Byte4Array) {
   for (int i = 0; i < BIT32_ARRAY_SIZE; i++){
@@ -37,14 +47,24 @@ void print4Bytes(uint8_t * Byte4Array) {
     Serial.print("Received Byte["); Serial.print(i); Serial.print("]:");
     Serial.println(Byte4Array[i],BIN);
   }
+  // Just print next, only for debug
   merge_bytes_to_32bits(data_received_l, Byte4Array);
   Serial.print("Received Data: "); Serial.println(data_received_l,DEC);
 }
 
-void returnCurrentState() {
-  Serial.println("UNDER DEVEL... SORRY...");
+template<typename T>
+void sendBack4bytes(T val) {
+  // Break val to 4 bytes
+  split_32bits_to_bytes(val, bit32_array);
+  // Send the 4 bytes
+  for (int i = 0; i < BIT32_ARRAY_SIZE; i++){
+    Serial3.write(bit32_array[i]);
+  }
   return;
 }
+template void sendBack4bytes<float>(float);
+template void sendBack4bytes<long>(long);
+
 void setup() {
   pinMode(LED_pin, OUTPUT);
   Serial.begin(SERIAL0_BAUD1);
@@ -69,7 +89,7 @@ void loop() {
       cur_state_l = ST_LED_OFF_L;
     } else if (cmd_received == GIVE_STATE){
       Serial3.write((uint8_t) SYNCED);
-      returnCurrentState();
+      sendBack4bytes(cur_state_l);
     }
     else {
       Serial.println("UNKNOWN COMMAND RECEIVED!");
