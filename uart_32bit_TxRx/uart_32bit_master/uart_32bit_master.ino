@@ -14,7 +14,12 @@ const uint8_t DXL_DIR_PIN = 2;
  * DUE(master) -> Serial3 -> DUE(slave)
  * Master sends 32 bits through 4 packets and slave
  * reacts and responds.
+ * 
+ *    MASTER DUE               SLAVE DUE
+ * PIN 14 (TX3)-(YEL)  ->  PIN 15 (RX3)-(BLUE)
+ * PIN 15 (RX3)-(BLUE) ->  PIN 14 (TX3)-(YEL)
  */
+ 
 #define CMD_LED_ON_1  10 // 00001010 (BIN)
 #define CMD_LED_OFF_1 20 // 00010100 (BIN)
 #define GIVE_STATE    30 // 00011110 (BIN)
@@ -63,12 +68,12 @@ void get4Byte(uint8_t * Byte4Array, uint8_t Get4BytesCmd) {
     for (int i = 0; i < BIT32_ARRAY_SIZE; i++){
       while(!Serial3.available());
       *(Byte4Array + i) = Serial3.read();
-      Serial.print("Received Byte["); Serial.print(i); Serial.print("]:");
-      Serial.println(Byte4Array[i],BIN);
+      SerialUSB.print("Received Byte["); SerialUSB.print(i); SerialUSB.print("]:");
+      SerialUSB.println(Byte4Array[i],BIN);
     }
     // Just print next, only for debug
     merge_bytes_to_32bits(data_received_l, Byte4Array);
-    Serial.print("Received Data: "); Serial.println(data_received_l,DEC);    
+    SerialUSB.print("Received Data: "); SerialUSB.println(data_received_l,DEC);    
 }
 
 template<typename T>
@@ -124,6 +129,7 @@ void loop() {
   }
   merge_bytes_to_32bits(response_l, bit32_array);
   SerialUSB.print("STATE 1 RECEIVED: ");SerialUSB.println(response_l,DEC);
+  delay(1000);
   
   // SET THE LED->OFF
   next_cmd_flag = (uint8_t) CMD_LED_OFF_1;
@@ -144,5 +150,5 @@ void loop() {
   }
   merge_bytes_to_32bits(response_l, bit32_array);
   SerialUSB.print("STATE 2 RECEIVED: ");SerialUSB.println(response_l,DEC);
-  
+  delay(1000);
 }

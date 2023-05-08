@@ -13,6 +13,15 @@
 #define ST_LED_ON_L   87978797 // 00000101-00111110-01110011-00101101 (BIN)
 #define ST_LED_OFF_L  89548954 // 00000101-01010110-01101000-10011010 (BIN)
 
+/*
+ * DUE(master) -> Serial3 -> DUE(slave)
+ * Slave code, waits for known commands and responds. When "get" comm
+ * 
+ *    MASTER DUE               SLAVE DUE
+ * PIN 14 (TX3)-(YEL)  ->  PIN 15 (RX3)-(BLUE)
+ * PIN 15 (RX3)-(BLUE) ->  PIN 14 (TX3)-(YEL)
+ */
+ 
 uint8_t cmd_received;
 float data_received_f;
 long data_received_l;
@@ -41,6 +50,7 @@ template void split_32bits_to_bytes<float>(float val, uint8_t *byte_array);
 template void split_32bits_to_bytes<long>(long val, uint8_t *byte_array);
 
 void print4Bytes(uint8_t * Byte4Array) {
+  Serial.println("8");
   for (int i = 0; i < BIT32_ARRAY_SIZE; i++){
     while(!Serial3.available());
     *(Byte4Array + i) = Serial3.read();
@@ -53,17 +63,20 @@ void print4Bytes(uint8_t * Byte4Array) {
 }
 
 template<typename T>
-void sendBack4bytes(T val) {
+void sendBack4bytes(T val, uint8_t * Byte4Array) {
+  Serial.println("8");
   // Break val to 4 bytes
-  split_32bits_to_bytes(val, bit32_array);
+  split_32bits_to_bytes(val, Byte4Array);
   // Send the 4 bytes
   for (int i = 0; i < BIT32_ARRAY_SIZE; i++){
-    Serial3.write(bit32_array[i]);
+    Serial.print("Sent Byte["); Serial.print(i); Serial.print("]:");
+    Serial.println(Byte4Array[i],BIN);
+    Serial3.write(Byte4Array[i]);
   }
   return;
 }
-template void sendBack4bytes<float>(float);
-template void sendBack4bytes<long>(long);
+template void sendBack4bytes<float>(float,uint8_t *);
+template void sendBack4bytes<long>(long,uint8_t * );
 
 void setup() {
   pinMode(LED_pin, OUTPUT);
@@ -89,7 +102,7 @@ void loop() {
       cur_state_l = ST_LED_OFF_L;
     } else if (cmd_received == GIVE_STATE){
       Serial3.write((uint8_t) SYNCED);
-      sendBack4bytes(cur_state_l);
+      sendBack4bytes(cur_state_l,bit32_array);
     }
     else {
       Serial.println("UNKNOWN COMMAND RECEIVED!");
